@@ -1,0 +1,76 @@
+<?php
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Web\AdminController;
+use App\Http\Controllers\Web\AuthController;
+use App\Http\Controllers\Web\UserController;
+
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return view('landing');
+})->name('home');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+    Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register.show');
+    Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
+    Route::get('/password/reset', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
+    Route::post('/password/email', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::get('/password/reset/{token}', [AuthController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/password/reset', [AuthController::class, 'resetPassword'])->name('password.update');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+Route::get('/dashboard', [AuthController::class, 'dashboardRedirect'])->middleware('auth')->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::prefix('admin')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/customers', [AdminController::class, 'customers'])->name('admin.customers');
+        Route::get('/sim-cards', [AdminController::class, 'simCards'])->name('admin.sim-cards');
+        Route::get('/sim-cards/create', [AdminController::class, 'showCreateForm'])->name('admin.sim-cards.create');
+        Route::post('/sim-cards', [AdminController::class, 'storeSimCard'])->name('admin.sim-cards.store');
+        Route::get('/sim-cards/{sim}/assign', [AdminController::class, 'showAssignForm'])->name('admin.sim-cards.assign');
+        Route::post('/sim-cards/{sim}/assign', [AdminController::class, 'assignSimCard'])->name('admin.sim-cards.assign.submit');
+        Route::get('/transactions/pending', [AdminController::class, 'pendingTransactions'])->name('admin.pending');
+        Route::post('/transactions/{transaction}/approve', [AdminController::class, 'approveTransaction'])->name('admin.transactions.approve');
+        Route::post('/transactions/{transaction}/cancel', [AdminController::class, 'cancelTransaction'])->name('admin.transactions.cancel');
+        Route::get('/transactions/history', [AdminController::class, 'transactionHistory'])->name('admin.history');
+        Route::get('/sim-cards/{sim}/buy-data', [AdminController::class, 'showBuyDataForm'])->name('admin.sim-cards.buy-data');
+        Route::post('/sim-cards/{sim}/buy-data', [AdminController::class, 'purchaseData'])->name('admin.sim-cards.buy-data.submit');
+    });
+
+    Route::prefix('user')->group(function () {
+        Route::post('/transactions/{transaction}/reverse', [UserController::class, 'requestReversal'])->name('user.transactions.requestReversal');
+        Route::get('/wallet/top-up', [UserController::class, 'showWalletTopUpForm'])->name('user.wallet.topup');
+        Route::post('/wallet/top-up', [UserController::class, 'walletTopUp'])->name('user.wallet.topup.submit');
+        Route::get('/sim-cards/{sim}/recharge', [UserController::class, 'showRechargeForm'])->name('user.sim.recharge');
+        Route::post('/sim-cards/{sim}/recharge', [UserController::class, 'rechargeSimCard'])->name('user.sim.recharge.submit');
+        Route::get('/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
+        Route::get('/transfer', [UserController::class, 'transfer'])->name('user.transfer');
+        Route::post('/transfer/send', [UserController::class, 'sendTransfer'])->name('user.send');
+        Route::get('/history', [UserController::class, 'history'])->name('user.history');
+        Route::get('/sim-cards', [UserController::class, 'mySimCards'])->name('user.sims');
+        Route::get('/profile', [UserController::class, 'profile'])->name('user.profile');
+    });
+});
+
+Route::get('/debug/sims', function () {
+    $sims = \App\Models\SimCard::with(['customer', 'customer.user'])->limit(10)->get();
+    return response()->json([
+        'total_sims' => \App\Models\SimCard::count(),
+        'sims' => $sims->map(function($sim) {
+            return [
+                'id' => $sim->id,
+                'phone_number' => $sim->phone_number,
+                'status' => $sim->status,
+                'customer_id' => $sim->customer_id,
+                'customer_name' => $sim->customer?->user?->name ?? 'No customer',
+            ];
+        })
+    ]);
+});
