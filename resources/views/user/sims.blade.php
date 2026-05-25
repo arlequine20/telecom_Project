@@ -31,10 +31,6 @@
                 <h5 class="mb-1">Wallet Balance</h5>
                 <p class="mb-0">RWF {{ number_format(auth()->user()->wallet->balance ?? 0, 2) }}</p>
             </div>
-            <div>
-                <h5 class="mb-1">Data Balance</h5>
-                <p class="mb-0">{{ number_format(auth()->user()->wallet->data_balance ?? 0, 2) }} MB</p>
-            </div>
             <div class="text-end">
                 <a href="{{ route('user.wallet.topup') }}" class="btn btn-primary">Top Up Wallet</a>
             </div>
@@ -54,7 +50,6 @@
                     <th>Phone</th>
                     <th>Status</th>
                     <th>Balance</th>
-                    <th>Data Balance</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -65,14 +60,13 @@
                     <td>{{ $sim->phone_number }}</td>
                     <td>{{ ucfirst($sim->status) }}</td>
                     <td>RWF {{ number_format($sim->balance, 2) }}</td>
-                    <td>{{ number_format($sim->data_balance, 2) }} MB</td>
                     <td>
                         <a href="{{ route('user.sim.recharge', $sim) }}" class="btn btn-sm btn-outline-success">Recharge</a>
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center text-muted">No SIM cards found.</td>
+                    <td colspan="5" class="text-center text-muted">No SIM cards found.</td>
                 </tr>
                 @endforelse
             </tbody>

@@ -16,7 +16,7 @@ class AuthController extends Controller
         try {
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users',
+                'email' => 'required|string|email:rfc|unique:users',
                 'password' => 'required|min:6|confirmed',
                 'role' => 'required|in:user,admin',
             ]);
@@ -48,7 +48,7 @@ class AuthController extends Controller
     {
         try {
             $validated = $request->validate([
-                'email' => 'required|email',
+                'email' => 'required|string|email:rfc|exists:users,email',
                 'password' => 'required|min:6',
             ]);
 

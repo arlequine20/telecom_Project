@@ -22,14 +22,27 @@
             --gray-bg: #F8F9FA;
         }
         
+        html,
+        body {
+            min-height: 100%;
+        }
+
         body {
             background-color: var(--gray-bg);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
+        .app-shell {
+            min-height: 100vh;
+        }
+
+        .sidebar-column {
+            background-color: var(--dark);
+        }
         
         .sidebar {
             background-color: var(--dark);
-            min-height: 100vh;
+            min-height: 100%;
             padding: 20px 0;
         }
         
@@ -124,10 +137,10 @@
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
+    <div class="container-fluid app-shell">
+        <div class="row app-shell">
             <!-- Sidebar -->
-            <div class="col-md-2 p-0">
+            <div class="col-md-2 p-0 sidebar-column">
                 <div class="sidebar">
                     <div class="text-center mb-4">
                         <h4 class="text-white">📱 TELECOM</h4>

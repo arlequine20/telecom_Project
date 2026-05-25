@@ -48,7 +48,21 @@
             </div>
             <div class="mb-3">
                 <label class="form-label" for="to_phone">Recipient Phone</label>
-                <input type="text" class="form-control" id="to_phone" name="to_phone" required>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="to_phone" name="to_phone" required>
+                    <button class="btn btn-outline-secondary" type="button" id="scanQrBtn">
+                        <i class="fas fa-qrcode"></i> Scan QR
+                    </button>
+                </div>
+                <div id="qrScannerPanel" class="border rounded p-3 mt-3" style="display:none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Scan recipient QR code</strong>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" id="stopQrBtn">Close</button>
+                    </div>
+                    <div id="qrReader" style="width:100%; max-width:360px;"></div>
+                    <small class="text-muted d-block mt-2">After scanning, the phone number will appear above for confirmation.</small>
+                </div>
+                <div id="qrScannerError" class="mt-2 alert alert-warning p-2" style="display:none;"></div>
                 <div id="recipientInfo" class="mt-2" style="display:none;">
                     <div class="alert alert-info p-2 mb-0">
                         <strong>Recipient:</strong> <span id="recipientName" class="ms-2"></span>
@@ -98,6 +112,7 @@
     </div>
 </div>
 
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
     const toPhoneInput = document.getElementById('to_phone');
     const amountInput = document.getElementById('amount');
@@ -108,12 +123,41 @@
     const summarySection = document.getElementById('summarySectionContainer');
     const submitBtn = document.getElementById('submitBtn');
     const transferForm = document.getElementById('transferForm');
+    const scanQrBtn = document.getElementById('scanQrBtn');
+    const stopQrBtn = document.getElementById('stopQrBtn');
+    const qrScannerPanel = document.getElementById('qrScannerPanel');
+    const qrScannerError = document.getElementById('qrScannerError');
 
     let isValidRecipient = false;
     let lookupTimer = null;
+    let qrScanner = null;
 
     function normalizePhone(phone) {
         return phone.replace(/\D+/g, '');
+    }
+
+    function extractPhoneFromQr(decodedText) {
+        const trimmed = decodedText.trim();
+
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (parsed.phone || parsed.phone_number || parsed.msisdn) {
+                return parsed.phone || parsed.phone_number || parsed.msisdn;
+            }
+        } catch (error) {
+            // QR values can be plain text, tel links, URLs, or JSON.
+        }
+
+        if (trimmed.toLowerCase().startsWith('tel:')) {
+            return trimmed.slice(4);
+        }
+
+        try {
+            const url = new URL(trimmed);
+            return url.searchParams.get('phone') || url.searchParams.get('phone_number') || url.searchParams.get('msisdn') || trimmed;
+        } catch (error) {
+            return trimmed;
+        }
     }
 
     const lookupEndpoint = '{{ url("api/sim-cards/lookup/by-phone") }}';
@@ -226,6 +270,55 @@
             recipientError.textContent = 'Please verify the recipient phone number is correct';
         }
     });
+
+    async function stopQrScanner() {
+        if (qrScanner) {
+            try {
+                await qrScanner.stop();
+                qrScanner.clear();
+            } catch (error) {
+                console.warn('Unable to stop QR scanner:', error);
+            }
+            qrScanner = null;
+        }
+
+        qrScannerPanel.style.display = 'none';
+    }
+
+    scanQrBtn.addEventListener('click', async function() {
+        qrScannerError.style.display = 'none';
+        qrScannerPanel.style.display = 'block';
+
+        if (typeof Html5Qrcode === 'undefined') {
+            qrScannerError.style.display = 'block';
+            qrScannerError.textContent = 'QR scanner library could not load. Please type the number manually.';
+            return;
+        }
+
+        if (qrScanner) {
+            return;
+        }
+
+        qrScanner = new Html5Qrcode('qrReader');
+
+        try {
+            await qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 240, height: 240 } },
+                async (decodedText) => {
+                    const scannedPhone = extractPhoneFromQr(decodedText);
+                    toPhoneInput.value = scannedPhone;
+                    await stopQrScanner();
+                    lookupRecipient(scannedPhone);
+                }
+            );
+        } catch (error) {
+            qrScanner = null;
+            qrScannerError.style.display = 'block';
+            qrScannerError.textContent = 'Unable to open the camera. Allow camera access or type the phone number manually.';
+        }
+    });
+
+    stopQrBtn.addEventListener('click', stopQrScanner);
 </script>
 @endsection
-

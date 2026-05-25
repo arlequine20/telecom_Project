@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -280,7 +281,65 @@ class UserController extends Controller
         $customerId = $this->getCustomerId();
         $customer = Customer::find($customerId);
         $simCards = SimCard::where('customer_id', $customerId)->get();
+        $wallet = Auth::user()->wallet;
         
-        return view('user.profile', compact('customer', 'simCards'));
+        return view('user.profile', compact('customer', 'simCards', 'wallet'));
+    }
+
+    public function updateProfile(Request $request)
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->customer) {
+            return back()->with('error', 'Customer profile not found.');
+        }
+
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => [
+                'required',
+                'email:rfc',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id),
+                Rule::unique('customers', 'email')->ignore($user->customer->id),
+            ],
+            'phone' => [
+                'required',
+                'string',
+                'max:30',
+                Rule::unique('customers', 'phone')->ignore($user->customer->id),
+            ],
+            'address' => 'nullable|string|max:500',
+            'date_of_birth' => 'nullable|date|before:today',
+        ]);
+
+        $emailChanged = $user->email !== $validated['email'];
+
+        DB::transaction(function () use ($user, $validated, $emailChanged) {
+            $user->forceFill([
+                'name' => trim($validated['first_name'] . ' ' . $validated['last_name']),
+                'email' => $validated['email'],
+                'email_verified_at' => $emailChanged ? null : $user->email_verified_at,
+            ])->save();
+
+            $user->customer->update([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+                'address' => $validated['address'] ?? null,
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+            ]);
+        });
+
+        if ($emailChanged) {
+            $user->sendEmailVerificationNotification();
+
+            return redirect()->route('verification.notice')->with('status', 'Your email was changed. Please verify the new email address.');
+        }
+
+        return redirect()->route('user.profile')->with('success', 'Profile updated successfully.');
     }
 }

@@ -8,6 +8,7 @@ use App\Models\SimCard;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AdminController extends Controller
 {
@@ -114,32 +115,30 @@ class AdminController extends Controller
 
     public function showAssignForm(SimCard $sim)
     {
-        if ($sim->customer_id !== null) {
-            return redirect()->route('admin.sim-cards')->with('error', 'This SIM card is already assigned and cannot be reassigned.');
-        }
-
         $customers = Customer::orderBy('first_name')->get();
         return view('admin.assign-sim', compact('sim', 'customers'));
     }
 
     public function assignSimCard(Request $request, SimCard $sim)
     {
-        if ($sim->customer_id !== null) {
-            return redirect()->route('admin.sim-cards')->with('error', 'This SIM card is already assigned and cannot be reassigned.');
-        }
-
         $validated = $request->validate([
             'customer_id' => 'required|exists:customers,id',
         ]);
 
-        $customer = Customer::find($validated['customer_id']);
+        $customer = Customer::findOrFail($validated['customer_id']);
+        $wasAssigned = $sim->customer_id !== null;
+
         $sim->customer_id = $customer->id;
         $sim->status = 'active';
-        $sim->assigned_at = now();
+        $sim->assigned_at = $sim->assigned_at ?? now();
         $sim->last_activity_at = now();
         $sim->save();
 
-        return redirect()->route('admin.sim-cards')->with('success', 'SIM card assigned to ' . $customer->full_name . '.');
+        $message = $wasAssigned
+            ? 'SIM card assignment updated to ' . $customer->full_name . '.'
+            : 'SIM card assigned to ' . $customer->full_name . '.';
+
+        return redirect()->route('admin.sim-cards')->with('success', $message);
     }
     
     public function pendingTransactions()
@@ -211,5 +210,162 @@ class AdminController extends Controller
             ->latest()
             ->paginate(30);
         return view('admin.history', compact('transactions'));
+    }
+
+    public function apiChecker()
+    {
+        $endpoints = [
+            [
+                'group' => 'Authentication',
+                'items' => [
+                    [
+                        'name' => 'Register user',
+                        'method' => 'POST',
+                        'path' => '/auth/register',
+                        'auth' => false,
+                        'description' => 'Create a user or admin account and return an API token.',
+                        'body' => [
+                            'name' => 'API Test User',
+                            'email' => 'api.user@example.com',
+                            'password' => 'password',
+                            'password_confirmation' => 'password',
+                            'role' => 'user',
+                        ],
+                    ],
+                    [
+                        'name' => 'Login',
+                        'method' => 'POST',
+                        'path' => '/auth/login',
+                        'auth' => false,
+                        'description' => 'Login with email and password to receive a bearer token.',
+                        'body' => [
+                            'email' => auth()->user()->email ?? 'admin@example.com',
+                            'password' => 'password',
+                        ],
+                    ],
+                    [
+                        'name' => 'Current user',
+                        'method' => 'GET',
+                        'path' => '/auth/me',
+                        'auth' => true,
+                        'description' => 'Return the authenticated user, wallet, customer, and SIM cards.',
+                    ],
+                    [
+                        'name' => 'Logout',
+                        'method' => 'POST',
+                        'path' => '/auth/logout',
+                        'auth' => true,
+                        'description' => 'Revoke the current user tokens.',
+                    ],
+                ],
+            ],
+            [
+                'group' => 'Customers',
+                'items' => [
+                    ['name' => 'List customers', 'method' => 'GET', 'path' => '/customers', 'auth' => true, 'description' => 'Admin-only paginated customer list.'],
+                    ['name' => 'Customer stats', 'method' => 'GET', 'path' => '/customers/stats/overview', 'auth' => true, 'description' => 'Admin-only customer totals.'],
+                    ['name' => 'Show customer', 'method' => 'GET', 'path' => '/customers/1', 'auth' => true, 'description' => 'Get a single customer by ID.'],
+                    [
+                        'name' => 'Create customer',
+                        'method' => 'POST',
+                        'path' => '/customers',
+                        'auth' => true,
+                        'description' => 'Admin-only customer creation.',
+                        'body' => [
+                            'first_name' => 'Test',
+                            'last_name' => 'Customer',
+                            'email' => 'customer@example.com',
+                            'phone' => '+250780000000',
+                            'address' => 'Kigali',
+                            'national_id' => '1199000000000000',
+                            'date_of_birth' => '1990-01-01',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'group' => 'SIM Cards',
+                'items' => [
+                    ['name' => 'Lookup by phone', 'method' => 'GET', 'path' => '/sim-cards/lookup/by-phone/+250780000000', 'auth' => false, 'description' => 'Public phone lookup used by the transfer screen.'],
+                    ['name' => 'List SIM cards', 'method' => 'GET', 'path' => '/sim-cards', 'auth' => true, 'description' => 'Admin-only paginated SIM inventory.'],
+                    ['name' => 'Unassigned SIM cards', 'method' => 'GET', 'path' => '/sim-cards/unassigned', 'auth' => true, 'description' => 'Admin-only list of SIMs ready for assignment.'],
+                    ['name' => 'SIM stats', 'method' => 'GET', 'path' => '/sim-cards/stats/overview', 'auth' => true, 'description' => 'Admin-only SIM totals and balances.'],
+                    ['name' => 'SIM balance', 'method' => 'GET', 'path' => '/sim-cards/1/balance', 'auth' => true, 'description' => 'Get balance and data balance for one SIM.'],
+                    [
+                        'name' => 'Create SIM card',
+                        'method' => 'POST',
+                        'path' => '/sim-cards',
+                        'auth' => true,
+                        'description' => 'Admin-only SIM creation.',
+                        'body' => [
+                            'sim_number' => 'SIM-API-001',
+                            'phone_number' => '+250781111111',
+                            'tariff_plan' => 'prepaid',
+                            'balance' => 0,
+                        ],
+                    ],
+                    [
+                        'name' => 'Assign SIM card',
+                        'method' => 'PUT',
+                        'path' => '/sim-cards/1/assign',
+                        'auth' => true,
+                        'description' => 'Assign a SIM card to a customer.',
+                        'body' => ['customer_id' => 1],
+                    ],
+                    [
+                        'name' => 'Update SIM status',
+                        'method' => 'PUT',
+                        'path' => '/sim-cards/1/status',
+                        'auth' => true,
+                        'description' => 'Set SIM status to active, inactive, or suspended.',
+                        'body' => ['status' => 'active'],
+                    ],
+                ],
+            ],
+            [
+                'group' => 'Transactions',
+                'items' => [
+                    ['name' => 'List transactions', 'method' => 'GET', 'path' => '/transactions', 'auth' => true, 'description' => 'Paginated transaction list. Admins see all records.'],
+                    ['name' => 'Transaction stats', 'method' => 'GET', 'path' => '/transactions/stats/overview', 'auth' => true, 'description' => 'Admin-only transaction totals.'],
+                    ['name' => 'Show transaction', 'method' => 'GET', 'path' => '/transactions/1', 'auth' => true, 'description' => 'Get a single transaction by ID.'],
+                    [
+                        'name' => 'Create transfer',
+                        'method' => 'POST',
+                        'path' => '/transactions',
+                        'auth' => true,
+                        'description' => 'Create a transfer, data purchase, or recharge transaction.',
+                        'body' => [
+                            'type' => 'transfer',
+                            'from_sim_id' => 1,
+                            'to_sim_id' => 2,
+                            'amount' => 1000,
+                            'description' => 'API test transfer',
+                        ],
+                    ],
+                    ['name' => 'Approve transaction', 'method' => 'POST', 'path' => '/transactions/1/approve', 'auth' => true, 'description' => 'Admin-only transaction approval.'],
+                    ['name' => 'Cancel transaction', 'method' => 'POST', 'path' => '/transactions/1/cancel', 'auth' => true, 'description' => 'Admin-only transaction cancellation.'],
+                ],
+            ],
+            [
+                'group' => 'Wallet',
+                'items' => [
+                    ['name' => 'Show wallet', 'method' => 'GET', 'path' => '/wallet', 'auth' => true, 'description' => 'Return the authenticated user wallet.'],
+                    ['name' => 'Wallet stats', 'method' => 'GET', 'path' => '/wallet/stats', 'auth' => true, 'description' => 'Return wallet balances and spend totals.'],
+                    ['name' => 'Add balance', 'method' => 'POST', 'path' => '/wallet/add-balance', 'auth' => true, 'description' => 'Add money to the wallet.', 'body' => ['amount' => 1000]],
+                    ['name' => 'Deduct balance', 'method' => 'POST', 'path' => '/wallet/deduct-balance', 'auth' => true, 'description' => 'Deduct money from the wallet.', 'body' => ['amount' => 500]],
+                    ['name' => 'Add data', 'method' => 'POST', 'path' => '/wallet/add-data', 'auth' => true, 'description' => 'Add data balance to the wallet.', 'body' => ['data_amount' => 100]],
+                ],
+            ],
+        ];
+
+        $apiStatus = [
+            'base_url' => url('/api'),
+            'sanctum_installed' => class_exists(\Laravel\Sanctum\Sanctum::class),
+            'token_table_ready' => Schema::hasTable('personal_access_tokens'),
+            'protected_count' => collect($endpoints)->sum(fn ($group) => collect($group['items'])->where('auth', true)->count()),
+            'public_count' => collect($endpoints)->sum(fn ($group) => collect($group['items'])->where('auth', false)->count()),
+        ];
+
+        return view('admin.api-checker', compact('endpoints', 'apiStatus'));
     }
 }

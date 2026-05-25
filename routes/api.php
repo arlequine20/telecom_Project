@@ -19,24 +19,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
 
     // Customers
-    Route::apiResource('customers', CustomerController::class);
     Route::get('customers/stats/overview', [CustomerController::class, 'getStats']);
+    Route::apiResource('customers', CustomerController::class);
 
     // SIM Cards
     Route::get('sim-cards', [SimCardController::class, 'index']);
     Route::get('sim-cards/unassigned', [SimCardController::class, 'unassigned']);
+    Route::get('sim-cards/stats/overview', [SimCardController::class, 'getStats']);
     Route::get('sim-cards/{id}', [SimCardController::class, 'show']);
     Route::get('sim-cards/{id}/balance', [SimCardController::class, 'getBalance']);
     Route::post('sim-cards', [SimCardController::class, 'store']);
     Route::put('sim-cards/{id}/assign', [SimCardController::class, 'assign']);
     Route::put('sim-cards/{id}/status', [SimCardController::class, 'updateStatus']);
-    Route::get('sim-cards/stats/overview', [SimCardController::class, 'getStats']);
 
     // Transactions
+    Route::get('transactions/stats/overview', [TransactionController::class, 'getStats']);
     Route::apiResource('transactions', TransactionController::class);
     Route::post('transactions/{id}/approve', [TransactionController::class, 'approve']);
     Route::post('transactions/{id}/cancel', [TransactionController::class, 'cancel']);
-    Route::get('transactions/stats/overview', [TransactionController::class, 'getStats']);
 
     // Wallet
     Route::get('wallet', [WalletController::class, 'show']);

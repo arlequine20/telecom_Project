@@ -27,7 +27,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|string|email:rfc|exists:users,email',
             'password' => 'required|string',
         ]);
 
@@ -53,7 +53,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email:rfc|max:255|unique:users',
             'phone' => 'required|string|max:25|unique:customers,phone',
             'national_id' => 'required|string|max:50|unique:customers,national_id',
             'date_of_birth' => 'required|date',
@@ -91,8 +91,9 @@ class AuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        $user->sendEmailVerificationNotification();
 
-        return redirect()->route('user.dashboard');
+        return redirect()->route('verification.notice');
     }
 
     public function showForgotPasswordForm()
@@ -107,7 +108,7 @@ class AuthController extends Controller
     public function sendResetLinkEmail(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|string|email:rfc|exists:users,email',
         ]);
 
         $status = Password::sendResetLink($request->only('email'));
@@ -126,7 +127,7 @@ class AuthController extends Controller
     {
         $request->validate([
             'token' => 'required',
-            'email' => 'required|email',
+            'email' => 'required|string|email:rfc|exists:users,email',
             'password' => 'required|string|min:6|confirmed',
         ]);
 

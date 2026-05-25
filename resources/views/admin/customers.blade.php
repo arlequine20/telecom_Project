@@ -3,21 +3,7 @@
 @section('title', 'Customers | Telecom')
 
 @section('sidebar')
-    <a class="nav-link" href="{{ route('admin.dashboard') }}">
-        <i class="fas fa-tachometer-alt"></i> Dashboard
-    </a>
-    <a class="nav-link active" href="{{ route('admin.customers') }}">
-        <i class="fas fa-users"></i> Customers
-    </a>
-    <a class="nav-link" href="{{ route('admin.sim-cards') }}">
-        <i class="fas fa-sim-card"></i> SIM Cards
-    </a>
-    <a class="nav-link" href="{{ route('admin.pending') }}">
-        <i class="fas fa-clock"></i> Pending Approvals
-    </a>
-    <a class="nav-link" href="{{ route('admin.history') }}">
-        <i class="fas fa-history"></i> Transaction History
-    </a>
+    @include('admin.partials.sidebar')
 @endsection
 
 @section('header-title', 'Customers')

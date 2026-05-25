@@ -1,0 +1,1 @@
+php artisan tinker --execute="App\Models\User::where('email', 'rmukansanga@gmail.com')->update(['email_verified_at' => now()]);"

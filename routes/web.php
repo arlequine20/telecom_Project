@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Web\AdminController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\UserController;
@@ -25,9 +27,31 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
-Route::get('/dashboard', [AuthController::class, 'dashboardRedirect'])->middleware('auth')->name('dashboard');
+Route::get('/dashboard', [AuthController::class, 'dashboardRedirect'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/email/verify', function () {
+        return view('auth.verify-email');
+    })->name('verification.notice');
+
+    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+        $request->fulfill();
+
+        return redirect()->route('dashboard')->with('success', 'Email verified successfully.');
+    })->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+
+    Route::post('/email/verification-notification', function (Request $request) {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->route('dashboard');
+        }
+
+        $request->user()->sendEmailVerificationNotification();
+
+        return back()->with('status', 'A new verification link has been sent to your email address.');
+    })->middleware('throttle:6,1')->name('verification.send');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('/customers', [AdminController::class, 'customers'])->name('admin.customers');
@@ -36,10 +60,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/sim-cards', [AdminController::class, 'storeSimCard'])->name('admin.sim-cards.store');
         Route::get('/sim-cards/{sim}/assign', [AdminController::class, 'showAssignForm'])->name('admin.sim-cards.assign');
         Route::post('/sim-cards/{sim}/assign', [AdminController::class, 'assignSimCard'])->name('admin.sim-cards.assign.submit');
+        Route::put('/sim-cards/{sim}/assign', [AdminController::class, 'assignSimCard'])->name('admin.sim-cards.assign.update');
         Route::get('/transactions/pending', [AdminController::class, 'pendingTransactions'])->name('admin.pending');
         Route::post('/transactions/{transaction}/approve', [AdminController::class, 'approveTransaction'])->name('admin.transactions.approve');
         Route::post('/transactions/{transaction}/cancel', [AdminController::class, 'cancelTransaction'])->name('admin.transactions.cancel');
         Route::get('/transactions/history', [AdminController::class, 'transactionHistory'])->name('admin.history');
+        Route::get('/api-checker', [AdminController::class, 'apiChecker'])->name('admin.api-checker');
         Route::get('/sim-cards/{sim}/buy-data', [AdminController::class, 'showBuyDataForm'])->name('admin.sim-cards.buy-data');
         Route::post('/sim-cards/{sim}/buy-data', [AdminController::class, 'purchaseData'])->name('admin.sim-cards.buy-data.submit');
     });
@@ -56,6 +82,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/history', [UserController::class, 'history'])->name('user.history');
         Route::get('/sim-cards', [UserController::class, 'mySimCards'])->name('user.sims');
         Route::get('/profile', [UserController::class, 'profile'])->name('user.profile');
+        Route::put('/profile', [UserController::class, 'updateProfile'])->name('user.profile.update');
     });
 });
 
