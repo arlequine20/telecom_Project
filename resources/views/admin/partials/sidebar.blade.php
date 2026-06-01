@@ -7,6 +7,9 @@
 <a class="nav-link {{ request()->routeIs('admin.sim-cards*') ? 'active' : '' }}" href="{{ route('admin.sim-cards') }}">
     <i class="fas fa-sim-card"></i> SIM Cards
 </a>
+<a class="nav-link {{ request()->routeIs('admin.wallet.*') ? 'active' : '' }}" href="{{ route('admin.wallet.topup') }}">
+    <i class="fas fa-wallet"></i> Admin Wallet
+</a>
 <a class="nav-link {{ request()->routeIs('admin.pending') ? 'active' : '' }}" href="{{ route('admin.pending') }}">
     <i class="fas fa-clock"></i> Pending Approvals
 </a>

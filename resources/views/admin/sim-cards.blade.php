@@ -22,7 +22,6 @@
                     <th>SIM Number</th>
                     <th>Phone</th>
                     <th>Balance</th>
-                    <th>Data</th>
                     <th>Status</th>
                     <th>Customer</th>
                     <th>Action</th>
@@ -34,7 +33,6 @@
                     <td>{{ $sim->sim_number }}</td>
                     <td>{{ $sim->phone_number }}</td>
                     <td>RWF {{ number_format($sim->balance, 2) }}</td>
-                    <td>{{ number_format($sim->data_balance ?? 0, 2) }} MB</td>
                     <td>{{ ucfirst($sim->status) }}</td>
                     <td>{{ $sim->customer->full_name ?? 'Unassigned' }}</td>
                     <td>

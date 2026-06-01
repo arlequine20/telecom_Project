@@ -54,6 +54,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/wallet/top-up', [AdminController::class, 'showWalletTopUpForm'])->name('admin.wallet.topup');
+        Route::post('/wallet/top-up', [AdminController::class, 'walletTopUp'])->name('admin.wallet.topup.submit');
         Route::get('/customers', [AdminController::class, 'customers'])->name('admin.customers');
         Route::get('/sim-cards', [AdminController::class, 'simCards'])->name('admin.sim-cards');
         Route::get('/sim-cards/create', [AdminController::class, 'showCreateForm'])->name('admin.sim-cards.create');

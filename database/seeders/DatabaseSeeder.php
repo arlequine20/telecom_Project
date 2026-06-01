@@ -24,6 +24,16 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        Wallet::firstOrCreate(
+            ['user_id' => $admin->id],
+            [
+                'balance' => 1000000.00,
+                'total_spend' => 0.00,
+                'data_balance' => 0.00,
+                'data_unit' => 'MB',
+            ]
+        );
+
         $user = User::firstOrCreate(
             ['email' => 'user@telecom.local'],
             [

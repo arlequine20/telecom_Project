@@ -27,13 +27,54 @@ class AdminController extends Controller
         $totalCustomers = Customer::count();
         $activeSims = SimCard::where('status', 'active')->count();
         $totalBalance = SimCard::sum('balance');
+        $adminWalletBalance = request()->user()->wallet->balance ?? 0;
         $pendingTransactions = Transaction::whereIn('status', [Transaction::STATUS_PENDING, Transaction::STATUS_REVERSAL_REQUESTED])->count();
         $recentTransactions = Transaction::with(['fromSim', 'toSim'])->latest()->take(10)->get();
         
         return view('admin.dashboard', compact(
-            'totalCustomers', 'activeSims', 'totalBalance', 
+            'totalCustomers', 'activeSims', 'totalBalance', 'adminWalletBalance',
             'pendingTransactions', 'recentTransactions'
         ));
+    }
+
+    public function showWalletTopUpForm(Request $request)
+    {
+        $wallet = $request->user()->wallet;
+
+        if (!$wallet) {
+            $wallet = $request->user()->wallet()->create([
+                'balance' => 0,
+                'total_spend' => 0,
+                'data_balance' => 0,
+                'data_unit' => 'MB',
+            ]);
+        }
+
+        return view('admin.wallet-topup', compact('wallet'));
+    }
+
+    public function walletTopUp(Request $request)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        DB::transaction(function () use ($request, $validated) {
+            $wallet = $request->user()->wallet()->lockForUpdate()->first();
+
+            if (!$wallet) {
+                $wallet = $request->user()->wallet()->create([
+                    'balance' => 0,
+                    'total_spend' => 0,
+                    'data_balance' => 0,
+                    'data_unit' => 'MB',
+                ]);
+            }
+
+            $wallet->addBalance($validated['amount']);
+        });
+
+        return redirect()->route('admin.dashboard')->with('success', 'Admin wallet topped up successfully.');
     }
     
     public function customers()
@@ -143,7 +184,7 @@ class AdminController extends Controller
     
     public function pendingTransactions()
     {
-        $transactions = Transaction::with(['fromSim', 'toSim'])
+        $transactions = Transaction::with(['fromSim.customer', 'toSim.customer'])
             ->whereIn('status', [Transaction::STATUS_PENDING, Transaction::STATUS_REVERSAL_REQUESTED])
             ->latest()
             ->paginate(20);

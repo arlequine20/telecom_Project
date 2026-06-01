@@ -113,9 +113,19 @@
                 <tbody>
                     @foreach($transactions as $transaction)
                     <tr>
+                        @php
+                            $senderName = $transaction->fromSim?->customer?->full_name;
+                            $receiverName = $transaction->toSim?->customer?->full_name;
+                        @endphp
                         <td>{{ $transaction->transaction_reference }}</td>
-                        <td>{{ $transaction->fromSim->phone_number }}</td>
-                        <td>{{ $transaction->toSim->phone_number }}</td>
+                        <td>
+                            <div class="fw-semibold">{{ $senderName ?? 'Unassigned customer' }}</div>
+                            <div class="text-muted small">{{ $transaction->fromSim->phone_number ?? 'N/A' }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ $receiverName ?? 'Unassigned customer' }}</div>
+                            <div class="text-muted small">{{ $transaction->toSim->phone_number ?? 'N/A' }}</div>
+                        </td>
                         <td>RWF {{ number_format($transaction->amount, 2) }}</td>
                         <td>RWF {{ number_format($transaction->fee, 2) }}</td>
                         <td>RWF {{ number_format($transaction->amount + $transaction->fee, 2) }}</td>

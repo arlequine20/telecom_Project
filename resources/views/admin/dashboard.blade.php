@@ -28,8 +28,9 @@
     <div class="col-md-3 mb-4">
         <div class="stat-card">
             <i class="fas fa-money-bill-wave fa-2x mb-3" style="color: var(--warning)"></i>
-            <h3>RWF {{ number_format($totalBalance, 2) }}</h3>
-            <p class="text-muted mb-0">Total Balance</p>
+            <h3>RWF {{ number_format($adminWalletBalance, 2) }}</h3>
+            <p class="text-muted mb-0">Admin Wallet</p>
+            <a href="{{ route('admin.wallet.topup') }}" class="btn btn-sm btn-outline-primary mt-3">Add Funds</a>
         </div>
     </div>
     <div class="col-md-3 mb-4">

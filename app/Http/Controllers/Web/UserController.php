@@ -73,21 +73,51 @@ class UserController extends Controller
             'amount' => 'required|numeric|min:1',
         ]);
 
+        /** @var User|null $user */
+        $user = Auth::user();
         $wallet = Auth::user()->wallet;
         if (!$wallet) {
             return back()->with('error', 'Wallet not found. Please contact support.');
         }
 
         try {
-            DB::transaction(function () use ($wallet, $request) {
-                $wallet = $wallet->fresh();
-                $wallet->addBalance($request->input('amount'));
+            DB::transaction(function () use ($user, $request) {
+                $amount = (float) $request->input('amount');
+                $admin = User::where('role', 'admin')->orderBy('id')->lockForUpdate()->first();
+
+                if (!$admin) {
+                    throw new \RuntimeException('Admin funding wallet is not configured.');
+                }
+
+                $adminWallet = $admin->wallet()->lockForUpdate()->first();
+                if (!$adminWallet) {
+                    $adminWallet = $admin->wallet()->create([
+                        'balance' => 0,
+                        'total_spend' => 0,
+                        'data_balance' => 0,
+                        'data_unit' => 'MB',
+                    ]);
+                }
+
+                if ($adminWallet->balance < $amount) {
+                    throw new \RuntimeException('Admin wallet has insufficient balance for this top-up.');
+                }
+
+                $userWallet = $user->wallet()->lockForUpdate()->first();
+                if (!$userWallet) {
+                    throw new \RuntimeException('Wallet not found. Please contact support.');
+                }
+
+                $adminWallet->deductBalance($amount);
+                $userWallet->addBalance($amount);
             });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             return back()->with('error', 'Unable to top up wallet at this time.');
         }
 
-        return redirect()->route('user.sims')->with('success', 'Wallet top-up successful.');
+        return redirect()->route('user.sims')->with('success', 'Wallet top-up successful. Funds were transferred from the admin wallet.');
     }
 
     public function rechargeSimCard(Request $request, SimCard $sim)
