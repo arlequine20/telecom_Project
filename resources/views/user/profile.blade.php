@@ -95,6 +95,7 @@
 <div class="card">
     <div class="card-body">
         <h5>Assigned SIM Cards</h5>
+        <p class="text-muted small mb-3">Scan this QR code with another device on the same network — browser camera scanning the same screen may not work.</p>
         <table class="table table-custom">
             <thead>
                 <tr>
@@ -111,7 +112,7 @@
                     <td>RWF {{ number_format($sim->balance, 2) }}</td>
                     <td>{{ ucfirst($sim->status) }}</td>
                     <td>
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=96x96&data={{ urlencode($sim->phone_number) }}" alt="QR code for {{ $sim->phone_number }}" width="72" height="72">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=96x96&data={{ urlencode(request()->getSchemeAndHttpHost() . '/send/' . $sim->phone_number) }}" alt="QR code for {{ $sim->phone_number }}" width="72" height="72">
                         <small class="d-block text-muted">{{ $sim->phone_number }}</small>
                     </td>
                 </tr>

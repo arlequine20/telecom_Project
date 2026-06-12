@@ -181,6 +181,23 @@ class AdminController extends Controller
 
         return redirect()->route('admin.sim-cards')->with('success', $message);
     }
+
+    public function destroyCustomer(Customer $customer)
+    {
+        DB::transaction(function () use ($customer) {
+            $customer->simCards()->update(['customer_id' => null, 'status' => 'inactive']);
+            $customer->delete();
+        });
+
+        return redirect()->route('admin.customers')->with('success', 'Customer deleted successfully and their SIM cards were unassigned.');
+    }
+
+    public function destroyTransaction(Transaction $transaction)
+    {
+        $transaction->delete();
+
+        return redirect()->route('admin.history')->with('success', 'Transaction history entry deleted successfully.');
+    }
     
     public function pendingTransactions()
     {

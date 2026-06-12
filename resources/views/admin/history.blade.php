@@ -22,6 +22,7 @@
                     <th>Fee</th>
                     <th>Status</th>
                     <th>Date</th>
+                    <th class="text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -34,6 +35,13 @@
                     <td>RWF {{ number_format($transaction->fee, 2) }}</td>
                     <td>{{ ucfirst($transaction->status) }}</td>
                     <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
+                    <td class="text-end">
+                        <form action="{{ route('admin.transactions.destroy', $transaction) }}" method="POST" onsubmit="return confirm('Delete this transaction from history?');" class="d-inline-block">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
                 </tr>
                 @endforeach
             </tbody>

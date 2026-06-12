@@ -50,6 +50,37 @@ class UserController extends Controller
         return view('user.transfer', compact('simCards'));
     }
 
+    public function redirectToSend(string $phone)
+    {
+        if (Auth::check()) {
+            return redirect()->route('user.send.to', ['phone' => $phone]);
+        }
+
+        return redirect()->guest(route('user.send.to', ['phone' => $phone]));
+    }
+
+    public function sendTo(string $phone)
+    {
+        $customerId = $this->getCustomerId();
+        $simCards = SimCard::where('customer_id', $customerId)
+            ->where('status', 'active')
+            ->get();
+
+        $recipientSim = SimCard::findByPhone($phone);
+        $recipientName = null;
+        $recipientStatus = null;
+        $recipientError = null;
+
+        if ($recipientSim) {
+            $recipientStatus = $recipientSim->status;
+            $recipientName = optional($recipientSim->customer->user)->name ?: 'Unknown Customer';
+        } else {
+            $recipientError = 'No user was found for this number. Please check the QR code.';
+        }
+
+        return view('user.transfer', compact('simCards', 'phone', 'recipientName', 'recipientStatus', 'recipientError'));
+    }
+
     public function showRechargeForm(SimCard $sim)
     {
         $customerId = $this->getCustomerId();

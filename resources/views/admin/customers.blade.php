@@ -21,6 +21,7 @@
                     <th>Phone</th>
                     <th>Status</th>
                     <th>SIM Count</th>
+                    <th class="text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -31,6 +32,13 @@
                     <td>{{ $customer->phone }}</td>
                     <td>{{ ucfirst($customer->status) }}</td>
                     <td>{{ $customer->simCards->count() }}</td>
+                    <td class="text-end">
+                        <form action="{{ route('admin.customers.destroy', $customer) }}" method="POST" onsubmit="return confirm('Delete this customer and unassign their SIM cards?');" class="d-inline-block">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
                 </tr>
                 @endforeach
             </tbody>

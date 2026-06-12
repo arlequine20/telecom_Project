@@ -16,6 +16,9 @@
 <a class="nav-link {{ request()->routeIs('admin.history') ? 'active' : '' }}" href="{{ route('admin.history') }}">
     <i class="fas fa-history"></i> Transaction History
 </a>
+<a class="nav-link {{ request()->routeIs('admin.reports*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
+     <i class="fas fa-chart-bar"></i> Reports
+</a>
 <a class="nav-link {{ request()->routeIs('admin.api-checker') ? 'active' : '' }}" href="{{ route('admin.api-checker') }}">
     <i class="fas fa-code"></i> API Checker
 </a>
